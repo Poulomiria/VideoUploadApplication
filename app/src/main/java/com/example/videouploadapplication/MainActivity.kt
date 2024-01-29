@@ -97,21 +97,47 @@ class VideoFrameExtractorViewModel : ViewModel() {
         // Implement frame extraction logic
         // Example: using MediaMetadataRetriever
         val retriever = MediaMetadataRetriever()
-        retriever.setDataSource("/Users/poulomi/Desktop/Mutton.mp4") // Replace videoUri with your video URI
-        val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-        val duration = durationStr?.toLong() ?: 0
-        val frameInterval = duration / NUM_FRAMES
+        try{
+            val frameFiles = mutableListOf<File>()
+            retriever.setDataSource("/storage/emulated/0/Android/data/com.example.videouploadapplication/files/frames/Mutton.mp4") // Replace videoUri with your video URI
 
-        for (i in 0 until NUM_FRAMES) {
-            val frameTime = i * frameInterval * 1000 // Convert to microseconds
-            val frameBitmap = retriever.getFrameAtTime(frameTime, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-            val frameFile = File(framesDirectory, "frame_$i.jpg")
-            frameBitmap?.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(frameFile))
+            val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            val duration = durationStr?.toLong() ?: 0
+            val frameInterval = duration / NUM_FRAMES
+
+            for (i in 0 until NUM_FRAMES) {
+                val frameTime = i * frameInterval * 1000 // Convert to microseconds
+                val frameBitmap = retriever.getFrameAtTime(frameTime, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                val frameFile = File(framesDirectory, "frame_$i.jpg")
+                // Save the frame bitmap to the file
+                frameBitmap?.let { saveFrameToFile(it, frameFile) }
+
+                // Add the file to the list
+                frameFile?.let { frameFiles.add(it) }
+                //frameBitmap?.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(frameFile))
+            }
+
+            retriever.release()
+
+        }catch(ex : Exception)
+        {
+            println("err")
+            //Text("error")
         }
 
-        retriever.release()
         return framesDirectory
     }
+    private fun saveFrameToFile(frameBitmap: Bitmap, frameFile: File) {
+        try {
+            FileOutputStream(frameFile).use { outputStream ->
+                frameBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+            }
+        } catch (e: Exception) {
+            // Log the exception
+            e.printStackTrace()
+        }
+    }
+
 
     private fun createFramesDirectory(context: Context): File {
         val storageDir = File(context.getExternalFilesDir(null), "frames").apply { mkdirs() }
@@ -119,6 +145,6 @@ class VideoFrameExtractorViewModel : ViewModel() {
     }
 
     companion object {
-        private const val NUM_FRAMES = 10 // Number of frames to extract from the video
+        private const val NUM_FRAMES = 1440 // Number of frames to extract from the video
     }
 }
